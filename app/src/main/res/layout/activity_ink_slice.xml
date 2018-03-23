@@ -11,14 +11,15 @@
         android:id="@+id/TopCommands"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:background="@color/colorPrimaryDark"
+        android:background="@android:color/background_light"
         android:orientation="horizontal">
 
         <ImageButton
-            android:id="@+id/imageButton"
+            android:id="@+id/SuccessBtn"
             android:layout_width="60dp"
             android:layout_height="match_parent"
-            android:background="@drawable/upper_button"
+            android:background="@drawable/bottom_left_btn"
+            android:src="@drawable/ic_if_check_2561355"
             app:srcCompat="@drawable/ic_if_check_2561355" />
 
         <RelativeLayout
@@ -26,53 +27,34 @@
             android:layout_height="match_parent"
             android:layout_weight="1">
 
+            <TextView
+                android:id="@+id/ProgressText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:text="Crop"
+                android:textAlignment="center"
+                android:textSize="24sp"
+                android:textStyle="bold" />
         </RelativeLayout>
 
         <ImageButton
-            android:id="@+id/imageButton2"
+            android:id="@+id/CancelBtn"
             android:layout_width="60dp"
             android:layout_height="match_parent"
-            android:background="@drawable/upper_button"
+            android:background="@drawable/bottom_right_btn"
+            android:src="@drawable/icon_cancel"
             app:srcCompat="@drawable/icon_cancel" />
 
     </LinearLayout>
 
     <RelativeLayout
+        android:id="@+id/CanvasLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:background="@android:color/background_dark">
 
     </RelativeLayout>
-
-    <LinearLayout
-        android:id="@+id/BottomCommands"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:background="@drawable/bottom_background"
-        android:orientation="horizontal">
-
-        <ImageButton
-            android:id="@+id/imageButton3"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/bottom_left_btn"
-            app:srcCompat="@drawable/icon_scale" />
-
-        <ImageButton
-            android:id="@+id/imageButton4"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/bottom_right_btn"
-            app:srcCompat="@drawable/rotate_icon" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="47dp"
-        android:background="@drawable/under_bottom"
-        android:orientation="vertical"></LinearLayout>
 
 </LinearLayout>

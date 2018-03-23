@@ -9,11 +9,25 @@
                     </solid>
                 </shape>
             </item>
+            <item android:left="1dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#11000000">
+
+                    </solid>
+                </shape>
+            </item>
         </layer-list>
     </item>
     <item>
         <layer-list>
             <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#11000000">
+
+                    </solid>
+                </shape>
+            </item>
+            <item android:right="1dp">
                 <shape android:shape="rectangle">
                     <solid android:color="@android:color/background_light">
 
