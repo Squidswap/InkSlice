@@ -1,7 +1,9 @@
 package com.squidswap.inkslice.inkslice;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -19,6 +21,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.ContextThemeWrapper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
@@ -29,6 +32,8 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 import javax.xml.transform.Source;
@@ -40,11 +45,12 @@ public class InkSliceActivity extends Activity {
     private SliceCanvas SliceCan;
     private RelativeLayout CanvasLayout;
     private ImageButton SuccessBtn,CancelBtn;
-    private int SELECT_PICTURE = 1;
+    private int SELECT_PICTURE = 1,INKSLICE_RETURN = 5;
     private float POINT_X,POINT_Y,PORT_WIDTH,PORT_HEIGHT,IMG_X,IMG_Y;
     private static Bitmap SliceFile,BeforeCrop;
     private boolean RESIZING = false,CROPPING = false;
     private TextView ProgressInst;
+    private String TempFileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,13 +74,6 @@ public class InkSliceActivity extends Activity {
         Intent intent2 = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
         intent2.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
 
-
-        //Start the activity here for testing by grabbing an image from the gallery.
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(Intent.createChooser(intent,
-                "Select Picture"), SELECT_PICTURE);
     }
 
     @Override
@@ -82,10 +81,7 @@ public class InkSliceActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if(resultCode == RESULT_OK){
-            if(requestCode == this.SELECT_PICTURE){
-                this.FocusedImage = data.getData();
-                SliceFile = FilServ.LoadFile(this.FocusedImage,true);
-            }
+            
         }
     }
 
@@ -103,31 +99,42 @@ public class InkSliceActivity extends Activity {
         SuccessBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SliceFile = SliceCan.ReturnCropPreview();
-                SliceCan.invalidate();
-                ProgressInst.setText("Confirm");
-
-                CancelBtn.setOnClickListener(new View.OnClickListener() {
+                AlertDialog.Builder b = new AlertDialog.Builder(new ContextThemeWrapper(InkSliceActivity.this,android.R.style.Theme_Material_Light));
+                b.setTitle("Crop Image?").setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(View view) {
-                        SliceFile = BeforeCrop;
-                        CROPPING = false;
-                        SliceCan.invalidate();
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Intent r = new Intent();
+                        r.putExtra("InksliceFile",FilServ.SaveFile(SliceCan.ReturnCropPreview(),TempFileName));
+                        r.putExtra("requestCode",INKSLICE_RETURN);
+                        setResult(RESULT_OK,r);
+                        finish();
                     }
-                });
+                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+
+                    }
+                }).show();
             }
         });
     }
 
     //Class that will initialize creating an inkslice activity.
     private class SliceBuilder extends Intent {
-        public SliceBuilder(Uri FirstImage,Uri ExportImage){
+        private Uri First;
+        private Context ctx;
 
+        public SliceBuilder(Context ctx, Uri FirstImage,String TempFileName){
+            super(ctx,InkSliceActivity.class);
+            TempFileName = TempFileName;
+            this.First = FirstImage;
+            this.ctx = ctx;
         }
 
         //Starts the slicing activity.
-        public void start(){
-
+        public Intent start(){
+            this.putExtra("InkSliceFile",this.First);
+            return this;
         }
     }
 
@@ -148,7 +155,7 @@ public class InkSliceActivity extends Activity {
 
             ViewPortPaint = new Paint();
             ViewPortPaint.setColor(Color.BLACK);
-            ViewPortPaint.setAlpha(200);
+            ViewPortPaint.setAlpha(160);
             ViewPortPaint.setStyle(Paint.Style.FILL);
 
             PorterPaint = new Paint();
@@ -231,8 +238,15 @@ public class InkSliceActivity extends Activity {
                                     //then they can start moving the rectange if not then we want to pan the background image.
 
                                     if(VIEWPORT_RECT.contains((int) motionEvent.getX(),(int) motionEvent.getY())){
-                                        POINT_X = motionEvent.getX();
-                                        POINT_Y = motionEvent.getY();
+                                        //Check here if the viewport is off the screen or not.
+                                        if(motionEvent.getY() + (PORT_HEIGHT/2) < getHeight() && motionEvent.getY() - (PORT_HEIGHT/2) > 0){
+                                            POINT_Y = motionEvent.getY();
+                                        }
+
+                                        if(motionEvent.getX() + (PORT_WIDTH/2) < getWidth() && motionEvent.getX() - (PORT_WIDTH/2) > 0){
+                                            POINT_X = motionEvent.getX();
+                                        }
+
                                         VIEWPORT_RECT.set((int) Math.floor(POINT_X - (PORT_WIDTH/2)),(int) Math.floor(POINT_Y - (PORT_HEIGHT/2)),(int) Math.floor(POINT_X + (PORT_WIDTH/2)),(int) Math.floor(POINT_Y + (PORT_HEIGHT/2)));
                                     }else{
                                         //If we are not in the viewport we want to capture pan points and move the background image appropriately.
@@ -457,6 +471,24 @@ public class InkSliceActivity extends Activity {
                 Toast.makeText(getApplicationContext(),"Error loading file...",Toast.LENGTH_SHORT).show();
                 return null;
             }
+        }
+
+        //Saves the cropped file to a temporary directory.
+        public String SaveFile(Bitmap b, String n){
+            File fil = new File(getApplicationContext().getCacheDir(),n);
+
+            try {
+                fil.createNewFile();
+                FileOutputStream fos = new FileOutputStream(fil);
+                b.compress(Bitmap.CompressFormat.PNG,100,fos);
+                fos.flush();
+                fos.close();
+            } catch (IOException e) {
+                Toast.makeText(getApplicationContext(),"Error saving temporary file...",Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
+            }
+
+            return fil.getAbsolutePath();
         }
     }
 }
